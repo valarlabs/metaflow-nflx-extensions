@@ -140,17 +140,25 @@ class Conda(object):
         self._cached_environment = read_conda_manifest(self._local_root)
 
         # Initialize storage
-        if self._datastore_type != "local" or CONDA_TEST:
-            # Prevent circular dep
+        def get_storage_impl():
             from metaflow.plugins import DATASTORES
 
-            # We will be able to cache things -- currently no caching for local except in testing
-            storage_impl = [d for d in DATASTORES if d.TYPE == self._datastore_type][0]
-            self._storage = storage_impl(
+            storage_impl = next(
+                (d for d in DATASTORES if d.TYPE == self._datastore_type), None
+            )
+
+            if storage_impl is None:
+                echo(
+                    "No storage implementation for datastore type: %s"
+                    % self._datastore_type
+                )
+                return None
+            echo("Using %s storage to cache environments." % self._datastore_type)
+            return storage_impl(
                 get_conda_root(self._datastore_type)
             )  # type: Optional[DataStoreStorage]
-        else:
-            self._storage = None
+
+        self._storage = get_storage_impl()
 
     def __del__(self):
         if self._micromamba_server_process:
@@ -874,6 +882,7 @@ class Conda(object):
             The list of aliases -- note that you can only update mutable aliases or
             add new ones.
         """
+
         if self._datastore_type != "local" or CONDA_TEST:
             # We first fetch any aliases we have remotely because that way
             # we will catch any non-mutable changes

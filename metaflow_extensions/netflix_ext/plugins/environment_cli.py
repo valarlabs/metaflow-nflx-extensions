@@ -203,20 +203,16 @@ def resolve(
     # If this is not a dry-run, we cache the environments and write out the resolved
     # information
     update_envs = []  # type: List[ResolvedEnvironment]
-    if obj.flow_datastore.TYPE != "local" or CONDA_TEST:
-        # We may need to update caches
-        # Note that it is possible that something we needed to resolve, we don't need
-        # to cache (if we resolved to something already cached).
-        formats = set()  # type: Set[str]
-        for _, resolved_env, f, _ in resolver.need_caching_environments():
-            update_envs.append(resolved_env)
-            formats.update(f)
 
-        conda.cache_environments(update_envs, {"conda": list(formats)})
-    else:
-        update_envs = [
-            resolved_env for _, resolved_env, _ in resolver.new_environments()
-        ]
+    # We may need to update caches
+    # Note that it is possible that something we needed to resolve, we don't need
+    # to cache (if we resolved to something already cached).
+    formats = set()  # type: Set[str]
+    for _, resolved_env, f, _ in resolver.need_caching_environments():
+        update_envs.append(resolved_env)
+        formats.update(f)
+
+    conda.cache_environments(update_envs, {"conda": list(formats)})
 
     conda.add_environments(update_envs)
 
